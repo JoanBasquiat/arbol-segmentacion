@@ -894,65 +894,72 @@ CreateDialog.ɵcmp = _angular_core__WEBPACK_IMPORTED_MODULE_6__["ɵɵdefineCompo
         _angular_core__WEBPACK_IMPORTED_MODULE_6__["ɵɵadvance"](4);
         _angular_core__WEBPACK_IMPORTED_MODULE_6__["ɵɵproperty"]("disabled", ctx.form.status === "INVALID" || !!ctx.code);
     } }, directives: [_angular_material_dialog__WEBPACK_IMPORTED_MODULE_2__["MatDialogTitle"], _angular_material_dialog__WEBPACK_IMPORTED_MODULE_2__["MatDialogContent"], _angular_forms__WEBPACK_IMPORTED_MODULE_1__["ɵangular_packages_forms_forms_y"], _angular_forms__WEBPACK_IMPORTED_MODULE_1__["NgControlStatusGroup"], _angular_forms__WEBPACK_IMPORTED_MODULE_1__["FormGroupDirective"], _angular_material_form_field__WEBPACK_IMPORTED_MODULE_7__["MatFormField"], _angular_material_input__WEBPACK_IMPORTED_MODULE_8__["MatInput"], _angular_forms__WEBPACK_IMPORTED_MODULE_1__["DefaultValueAccessor"], _angular_forms__WEBPACK_IMPORTED_MODULE_1__["NgControlStatus"], _angular_forms__WEBPACK_IMPORTED_MODULE_1__["FormControlName"], _angular_material_form_field__WEBPACK_IMPORTED_MODULE_7__["MatLabel"], _angular_material_autocomplete__WEBPACK_IMPORTED_MODULE_14__["MatAutocompleteTrigger"], _angular_material_autocomplete__WEBPACK_IMPORTED_MODULE_14__["MatAutocomplete"], _angular_common__WEBPACK_IMPORTED_MODULE_15__["NgIf"], _angular_material_slide_toggle__WEBPACK_IMPORTED_MODULE_16__["MatSlideToggle"], _angular_material_dialog__WEBPACK_IMPORTED_MODULE_2__["MatDialogActions"], _angular_material_button__WEBPACK_IMPORTED_MODULE_9__["MatButton"], _angular_material_dialog__WEBPACK_IMPORTED_MODULE_2__["MatDialogClose"], _angular_material_core__WEBPACK_IMPORTED_MODULE_17__["MatOption"], _angular_material_progress_spinner__WEBPACK_IMPORTED_MODULE_18__["MatSpinner"], _angular_common__WEBPACK_IMPORTED_MODULE_15__["NgForOf"]], styles: [_c0] });
+/**
+ * Can receive negative indexes, it will simply count all possible branches
+ * */
 function getBranchIndex(operators, index) {
-    const ors = operators.filter((value) => value === "OR").length;
-    let or_count = 0;
-    for (const [i, value] of Object.entries(operators)) {
-        if (value === "OR") {
-            or_count++;
-        }
+    let count = 0;
+    for (const [i, value] of Object.entries(operators).sort(([a], [b]) => Number(a) > Number(b) ? -1 : 1)) {
         if (Number(i) === index) {
             break;
         }
+        else if (value === "OR") {
+            count++;
+        }
     }
-    return ors - or_count + 1;
+    return count + 1;
 }
 function questionAndOperatorToPolitics(values, operators) {
     if (values.length > 1) {
-        const result = { a: undefined, b: [] };
         const last_branch = operators.filter((value) => value === "OR").length + 1;
-        for (const [index, value] of Object.entries(values)) {
-            const operator_index = Number(index) === 0 ? 0 : Number(index) - 1;
-            const branch = getBranchIndex(operators, operator_index);
-            if (branch !== last_branch) {
-                let current_node = result;
-                for (let x = 1; x <= branch; x++) {
-                    if (x < branch) {
-                        if (!current_node.a) {
+        if (last_branch !== 1) {
+            const result = { a: undefined, b: [] };
+            for (const [index, value] of Object.entries(values)) {
+                const operator_index = Number(index) - 1;
+                const branch = getBranchIndex(operators, operator_index);
+                if (branch !== last_branch) {
+                    let current_node = result;
+                    for (let x = 1; x <= branch; x++) {
+                        if (x < branch) {
+                            if (!current_node.a) {
+                                // @ts-ignore
+                                current_node.a = { a: undefined, b: [] };
+                            }
                             // @ts-ignore
-                            current_node.a = { a: undefined, b: [] };
+                            current_node = current_node.a;
                         }
-                        // @ts-ignore
-                        current_node = current_node.a;
+                        else {
+                            current_node.b.push(value);
+                        }
                     }
-                    else {
-                        current_node.b.push(value);
+                }
+                else {
+                    let current_node = result;
+                    for (let x = 1; x <= branch; x++) {
+                        if (x < (branch - 1)) {
+                            if (!current_node.a) {
+                                // @ts-ignore
+                                current_node.a = { a: undefined, b: [] };
+                            }
+                            // @ts-ignore
+                            current_node = current_node.a;
+                        }
+                        else if (x === branch - 1) {
+                            if (!current_node.a) {
+                                // @ts-ignore
+                                current_node.a = [];
+                            }
+                            // @ts-ignore
+                            current_node.a.push(value);
+                        }
                     }
                 }
             }
-            else {
-                let current_node = result;
-                for (let x = 1; x <= branch; x++) {
-                    if (x < (branch - 1)) {
-                        if (!current_node.a) {
-                            // @ts-ignore
-                            current_node.a = { a: undefined, b: [] };
-                        }
-                        // @ts-ignore
-                        current_node = current_node.a;
-                    }
-                    else if (x === branch - 1) {
-                        if (!current_node.a) {
-                            // @ts-ignore
-                            current_node.a = [];
-                        }
-                        // @ts-ignore
-                        current_node.a.push(value);
-                    }
-                }
-            }
+            return result;
         }
-        return result;
+        else {
+            return values;
+        }
     }
     else {
         return values;
